@@ -1,0 +1,348 @@
+openapi: 3.0.3
+info:
+  title: UE Session Manager API
+  description: API for managing UE (User Equipment) sessions in 5G Core network
+  version: 1.0.0
+  contact:
+    name: UE Session Manager Team
+    email: support@sessionmgr.com
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+  - url: https://api.sessionmgr.com/v1
+    description: Production server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the service is healthy
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  buildTime:
+                    type: string
+                    example: "2024-01-01T00:00:00Z"
+
+  /sessions:
+    post:
+      summary: Create a new session
+      description: Create a new UE session with the provided data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Session'
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Session created successfully"
+                  session:
+                    $ref: '#/components/schemas/Session'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Session already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Query sessions
+      description: Query sessions by IMSI and/or MSISDN
+      parameters:
+        - name: imsi
+          in: query
+          description: IMSI to search for
+          required: false
+          schema:
+            type: string
+            minLength: 14
+            maxLength: 15
+        - name: msisdn
+          in: query
+          description: MSISDN to search for
+          required: false
+          schema:
+            type: string
+            minLength: 10
+            maxLength: 15
+      responses:
+        '200':
+          description: Sessions found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+                  count:
+                    type: integer
+                    example: 2
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions/{id}:
+    get:
+      summary: Get session by TMSI
+      description: Retrieve a session by its TMSI
+      parameters:
+        - name: id
+          in: path
+          description: TMSI of the session
+          required: true
+          schema:
+            type: string
+            minLength: 4
+      responses:
+        '200':
+          description: Session found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session:
+                    $ref: '#/components/schemas/Session'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update session
+      description: Update an existing session
+      parameters:
+        - name: id
+          in: path
+          description: TMSI of the session
+          required: true
+          schema:
+            type: string
+            minLength: 4
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Session'
+      responses:
+        '200':
+          description: Session updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Session updated successfully"
+                  session:
+                    $ref: '#/components/schemas/Session'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete session
+      description: Delete a session by its TMSI
+      parameters:
+        - name: id
+          in: path
+          description: TMSI of the session
+          required: true
+          schema:
+            type: string
+            minLength: 4
+      responses:
+        '200':
+          description: Session deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Session deleted successfully"
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions/{id}/renew:
+    post:
+      summary: Renew session TTL
+      description: Renew the TTL (Time To Live) of a session
+      parameters:
+        - name: id
+          in: path
+          description: TMSI of the session
+          required: true
+          schema:
+            type: string
+            minLength: 4
+      responses:
+        '200':
+          description: Session TTL renewed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Session TTL renewed successfully"
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: Session has expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Session:
+      type: object
+      required:
+        - tmsi
+        - imsi
+        - msisdn
+      properties:
+        tmsi:
+          type: string
+          description: Temporary Mobile Subscriber Identity
+          minLength: 4
+          example: "12345678"
+        imsi:
+          type: string
+          description: International Mobile Subscriber Identity
+          minLength: 14
+          maxLength: 15
+          example: "123456789012345"
+        msisdn:
+          type: string
+          description: Mobile Station International Subscriber Directory Number
+          minLength: 10
+          maxLength: 15
+          example: "1234567890"
+        attach_time:
+          type: string
+          format: date-time
+          description: Time when the session was created
+          example: "2024-01-01T00:00:00Z"
+        last_update:
+          type: string
+          format: date-time
+          description: Time when the session was last updated
+          example: "2024-01-01T12:00:00Z"
+        gnb_id:
+          type: string
+          description: gNodeB identifier
+          example: "gNB001"
+        tai:
+          type: string
+          description: Tracking Area Identity
+          example: "TAI001"
+        ue_state:
+          type: string
+          description: UE state
+          enum: [REGISTERED, DEREGISTERED, IDLE, CONNECTED]
+          example: "REGISTERED"
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: UE capabilities
+          example: ["5G", "4G"]
+        security_context:
+          $ref: '#/components/schemas/SecurityContext'
+
+    SecurityContext:
+      type: object
+      properties:
+        kamf:
+          type: string
+          description: Access and Mobility Management Function Key
+          example: "test-kamf-123"
+        algorithm:
+          type: string
+          description: Security algorithm
+          example: "AES"
+        keyset_id:
+          type: string
+          description: Key set identifier
+          example: "1"
+        next_hop_chaining_count:
+          type: integer
+          description: Next hop chaining count
+          example: 1
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Session not found"
+        details:
+          type: string
+          description: Additional error details
+          example: "Validation failed for field 'tmsi'"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT 
